@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+<style>
+body {
+  font-family: "Helvetica Neue", sans-serif, Arial;
+  background:#f2f4f6;
+  height:100vh;
+  margin:0;
+  display:flex;
+  justify-content:center;
+  align-items:flex-start;
+  padding-top:30px;
+}
+
+.container {
+  background:#E8ECEF;
+  border: solid 0.5px #000;
+  padding:20px;
+  border-radius:10px;
+  box-shadow:0 0 10px rgba(0,0,0,0.1);
+  text-align:center;
+  width:300px;
+  margin-top:50px;
+}
+
+.input-box {
+  width:200px;
+  padding:10px;
+  font-size:16px;
+  text-align:center;
+}
+
+.submit-button {
+  width:120px;
+  font-size:16px;
+  color:#fff;
+  background:#455A64;
+  padding:5px;
+  cursor:pointer;
+  border:none;
+  border-radius:5px;
+}
+
+.submit-button:disabled {
+  background:#9E9E9E;
+  cursor:not-allowed;
+}
+
+.note {
+  font-size:12px;
+  color:#555;
+  margin-top:6px;
+}
+</style>
+
+<link rel="stylesheet"
+href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+<title>Mobile Login</title>
+</head>
+
+<body>
+<center>
+<div class="container">
+
+<!-- Tukar logo ikut kau -->
+<img src="logo.png" width="180"><br><br>
+
+<!-- ======== IP SERVER INPUT ======== -->
+<input id="serverIp"
+       class="input-box"
+       placeholder="Contoh: 192.168.0.109:8000"><br><br>
+
+<button class="submit-button" onclick="saveIp()">Set Server</button>
+
+<div class="note">
+Masukkan IP + port sahaja (tanpa http / https)
+</div>
+
+<hr style="margin:15px 0;">
+
+<!-- ======== PASSWORD LOGIN ======== -->
+<input type="password" id="pwd"
+       class="input-box"
+       placeholder="Enter Password"><br><br>
+
+<button type="button" id="submit-btn"
+        class="submit-button"
+        onclick="validateLogin()">Login</button>
+
+<div id="error-message"
+     style="color:red;font-weight:bold;margin-top:10px;"></div>
+
+</div>
+</center>
+
+<script>
+// ---------- SIMPAN IP (HTTPS) ----------
+function saveIp(){
+  const ip = document.getElementById("serverIp").value.trim();
+  if(!ip){
+    alert("Masukkan IP dulu");
+    return;
+  }
+  localStorage.setItem("API_BASE", "https://" + ip);
+  alert("Server set: https://" + ip);
+}
+
+// ---------- DAPATKAN BASE URL ----------
+function getApiBase(){
+  const base = localStorage.getItem("API_BASE");
+  if(!base){
+    alert("Sila masukkan IP server dahulu.");
+    throw new Error("No API_BASE");
+  }
+  return base;
+}
+
+// Trigger login bila tekan Enter
+document.getElementById('pwd').addEventListener('keydown', function(e){
+  if(e.key === "Enter"){
+    e.preventDefault();
+    validateLogin();
+  }
+});
+
+// ---------- LOGIN LOGIC (HTTPS) ----------
+function validateLogin(){
+  const enteredPassword = document.getElementById('pwd').value;
+  const btn = document.getElementById('submit-btn');
+  const err = document.getElementById('error-message');
+
+  err.innerText = "";
+  btn.innerText = "Loading...";
+  btn.disabled = true;
+
+  if(!enteredPassword){
+    err.innerText = "Masukkan password.";
+    btn.innerText = "Login";
+    btn.disabled = false;
+    return;
+  }
+
+  const API = getApiBase();
+
+  fetch(API + "/api/login", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({password: enteredPassword})
+  })
+  .then(r => r.json())
+  .then(res => {
+    btn.innerText = "Login";
+    btn.disabled = false;
+
+    if(res.success){
+      localStorage.setItem("sessionToken", res.token);
+      localStorage.setItem("userProfile", res.profile);
+
+      // 👉 Redirect terus ke mobile page di local HTTPS server
+      window.location.href = API + "/mobile";
+    } else {
+      err.innerText = "Wrong Password";
+    }
+  })
+  .catch(() => {
+    err.innerText = "Server unreachable / cert issue";
+    btn.disabled = false;
+  });
+}
+</script>
+
+</body>
+</html>
